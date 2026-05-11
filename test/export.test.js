@@ -10,6 +10,7 @@ import {
   formatSessionExport,
   inlineCode,
   loadRolloutFile,
+  publishTo0g,
   longestBacktickRun,
 } from "../src/index.js";
 
@@ -90,6 +91,46 @@ test("preserves fenced code as renderable markdown", () => {
   assert.equal(appendMessageBody("Example:\n```js\nconsole.log(1)\n```"), "Example:\n```js\nconsole.log(1)\n```\n");
   assert.equal(longestBacktickRun("````\nbody\n````"), 4);
   assert.equal(appendMessageBody("````\nbody\n````"), "````\nbody\n````\n");
+});
+
+test("publishes markdown to 0g.hk and records edit token in local history", async () => {
+  const temp = await fs.mkdtemp(path.join(os.tmpdir(), "codex-transcript-md-"));
+  const historyPath = path.join(temp, "links.jsonl");
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(JSON.stringify({
+      shortUrl: "https://demo.0g.hk/",
+      rawUrl: "https://demo.0g.hk/raw",
+      editToken: "secret-token",
+      name: "demo",
+      expiresAt: "2026-05-18T00:00:00Z",
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  const result = await publishTo0g("# Hello", {
+    name: "demo",
+    ttl: "1d",
+    fetchImpl,
+    historyPath,
+    source: "/tmp/session.md",
+    title: "demo title",
+  });
+
+  assert.equal(result.shortUrl, "https://demo.0g.hk/");
+  assert.equal(result.rawUrl, "https://demo.0g.hk/raw");
+  assert.equal(calls[0].url, "https://0g.hk/");
+  assert.deepEqual(JSON.parse(calls[0].init.body), { content: "# Hello", name: "demo", ttl: "1d" });
+  const [row] = (await fs.readFile(historyPath, "utf8")).trim().split("\n").map(JSON.parse);
+  assert.equal(row.short_url, "https://demo.0g.hk/");
+  assert.equal(row.edit_token, "secret-token");
+});
+
+test("rejects 0g.hk content over the service text limit", async () => {
+  await assert.rejects(
+    publishTo0g("x".repeat(24_577), { fetchImpl: async () => { throw new Error("should not fetch"); }, historyPath: false }),
+    /text limit/,
+  );
 });
 
 test("metadata inline code expands around backticks", () => {

@@ -3,6 +3,9 @@ import path from "node:path";
 import os from "node:os";
 
 const DEFAULT_EXPORTS_DIRNAME = "exports";
+const ZERO_G_ENDPOINT = "https://0g.hk/";
+const ZERO_G_TEXT_LIMIT_BYTES = 24_576;
+const ZERO_G_TTLS = new Set(["1h", "1d", "7d"]);
 
 export async function exportSessionToMarkdown(options) {
   const codexHome = expandHome(options?.codexHome ?? path.join(os.homedir(), ".codex"));
@@ -23,6 +26,7 @@ export async function exportSessionToMarkdown(options) {
   });
 
   if (options.stdout) {
+    if (options.publish0g) throw new Error("--stdout and --publish-0g cannot be used together");
     return {
       markdown: document.markdown,
       outputPath: null,
@@ -30,12 +34,31 @@ export async function exportSessionToMarkdown(options) {
       sessionId: document.sessionId,
       messageCount: document.messageCount,
       parseErrors: loaded.parseErrors,
+      zeroG: null,
     };
   }
 
   const outputPath = expandHome(options.outFile ?? path.join(exportsDir, defaultFilename(document.sessionId, rolloutPath)));
   await fs.mkdir(path.dirname(outputPath), { recursive: true, mode: 0o700 });
   await fs.writeFile(outputPath, document.markdown, "utf8");
+
+  let zeroG = null;
+  if (options.publish0g) {
+    try {
+      zeroG = await publishTo0g(document.markdown, {
+        name: options.ogName,
+        ttl: options.ogTtl,
+        fetchImpl: options.fetchImpl,
+        historyPath: options.ogHistoryPath,
+        source: outputPath,
+        title: `Codex session ${document.sessionId ?? path.basename(rolloutPath, ".jsonl")}`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`exported to ${outputPath}, but 0g.hk publish failed: ${message}`);
+    }
+  }
+
   return {
     markdown: document.markdown,
     outputPath,
@@ -43,7 +66,90 @@ export async function exportSessionToMarkdown(options) {
     sessionId: document.sessionId,
     messageCount: document.messageCount,
     parseErrors: loaded.parseErrors,
+    zeroG,
   };
+}
+
+export async function publishTo0g(content, options = {}) {
+  const byteLength = Buffer.byteLength(content, "utf8");
+  if (byteLength > ZERO_G_TEXT_LIMIT_BYTES) {
+    throw new Error(`0g.hk text limit is ${ZERO_G_TEXT_LIMIT_BYTES} bytes; export is ${byteLength} bytes`);
+  }
+  const ttl = options.ttl ?? "7d";
+  if (!ZERO_G_TTLS.has(ttl)) throw new Error("0g.hk ttl must be one of: 1h, 1d, 7d");
+  if (options.name && !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(options.name)) {
+    throw new Error("0g.hk name must use lowercase letters, numbers, hyphen, and start/end with alnum");
+  }
+
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== "function") throw new Error("global fetch is unavailable; Node.js >=20 is required");
+
+  const body = { content, ttl };
+  if (options.name) body.name = options.name;
+  const response = await fetchImpl(ZERO_G_ENDPOINT, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const responseText = await response.text();
+  let data = null;
+  try {
+    data = responseText ? JSON.parse(responseText) : null;
+  } catch {
+    data = null;
+  }
+  if (!response.ok) {
+    throw new Error(`0g.hk publish failed (${response.status}): ${responseText.slice(0, 300)}`);
+  }
+
+  const shortUrl = stringValue(data?.shortUrl ?? data?.short_url ?? data?.url ?? data?.href) ?? firstUrl(responseText);
+  if (!shortUrl) throw new Error(`0g.hk response did not include a URL: ${responseText.slice(0, 300)}`);
+  const rawUrl = stringValue(data?.rawUrl ?? data?.raw_url) ?? toRaw0gUrl(shortUrl);
+  const editToken = stringValue(data?.editToken ?? data?.edit_token ?? data?.token);
+  const editUrl = stringValue(data?.editUrl ?? data?.edit_url);
+  const name = stringValue(data?.name) ?? nameFrom0gUrl(shortUrl) ?? options.name;
+  const expiresAt = stringValue(data?.expiresAt ?? data?.expires_at);
+
+  const result = {
+    shortUrl,
+    rawUrl,
+    name,
+    ttl,
+    expiresAt,
+    editToken,
+    editUrl,
+  };
+  if (options.historyPath !== false) {
+    await append0gHistory({
+      event: "create",
+      name,
+      short_url: shortUrl,
+      raw_url: rawUrl,
+      edit_token: editToken,
+      edit_url: editUrl,
+      ttl,
+      expires_at: expiresAt,
+      title: options.title,
+      source: options.source,
+      recorded_at: new Date().toISOString(),
+    }, options.historyPath);
+  }
+  return result;
+}
+
+export async function append0gHistory(record, historyPath = default0gHistoryPath()) {
+  const file = expandHome(historyPath ?? default0gHistoryPath());
+  await fs.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
+  const handle = await fs.open(file, "a", 0o600);
+  try {
+    await handle.write(`${JSON.stringify(record)}\n`);
+  } finally {
+    await handle.close();
+  }
+  await fs.chmod(file, 0o600).catch(() => {});
 }
 
 export async function resolveCurrentRollout(sessionRoot = path.join(os.homedir(), ".codex", "sessions")) {
@@ -304,6 +410,35 @@ async function assertReadableFile(filePath) {
 async function assertReadableDirectory(dirPath) {
   const stat = await fs.stat(dirPath).catch(() => null);
   if (!stat || !stat.isDirectory()) throw new Error(`Directory not found: ${dirPath}`);
+}
+
+function default0gHistoryPath() {
+  return path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share"), "0g-hk", "links.jsonl");
+}
+
+function firstUrl(value) {
+  return String(value ?? "").match(/https?:\/\/[^\s"'<>]+/)?.[0];
+}
+
+function toRaw0gUrl(shortUrl) {
+  try {
+    const url = new URL(shortUrl);
+    url.pathname = "/raw";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function nameFrom0gUrl(shortUrl) {
+  try {
+    const host = new URL(shortUrl).hostname;
+    return host.endsWith(".0g.hk") ? host.slice(0, -".0g.hk".length) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function singleKeyObject(value) {
