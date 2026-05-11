@@ -5,7 +5,7 @@ description: Use when the user says /export-session, $export-session, export-ses
 
 # Export Session
 
-Export the current or specified Codex conversation to Markdown by calling the `codex-transcript-md` CLI.
+Export the current or specified Codex conversation to Markdown by calling the `@act0r/codex-transcript-md` CLI through `npx -y`.
 
 ## Hard rules
 
@@ -19,21 +19,19 @@ Export the current or specified Codex conversation to Markdown by calling the `c
 If the user provides a session id or JSONL path:
 
 ```bash
-npx -y codex-transcript-md <session-id-or-jsonl-path> -o <out.md>
+npx -y @act0r/codex-transcript-md <session-id-or-jsonl-path> -o <out.md>
 ```
 
-If the user just says `/export-session`, export the current session. Prefer a current rollout path if the runtime exposes one. If not, use the newest rollout JSONL as the local Codex current-session fallback:
+If the user just says `/export-session`, export the current session by letting the CLI pick the newest local Codex rollout JSONL:
 
 ```bash
-root="${CODEX_HOME:-$HOME/.codex}/sessions"
-rollout=$(find "$root" -type f -name 'rollout-*.jsonl' -print0 | xargs -0 ls -t | head -1)
-npx -y codex-transcript-md "$rollout"
+npx -y @act0r/codex-transcript-md --current
 ```
 
 For stdout, only when explicitly requested:
 
 ```bash
-npx -y codex-transcript-md <session-id-or-jsonl-path> --stdout
+npx -y @act0r/codex-transcript-md <session-id-or-jsonl-path> --stdout
 ```
 
 ## Response format

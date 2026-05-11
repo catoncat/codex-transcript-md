@@ -9,9 +9,10 @@ external session index, database, or local web app.
 ## Usage
 
 ```bash
-npx codex-transcript-md <session-id> -o session.md
-npx codex-transcript-md ~/.codex/sessions/2026/05/11/rollout-....jsonl -o session.md
-npx codex-transcript-md <session-id> --stdout
+npx @act0r/codex-transcript-md --current
+npx @act0r/codex-transcript-md <session-id> -o session.md
+npx @act0r/codex-transcript-md ~/.codex/sessions/2026/05/11/rollout-....jsonl -o session.md
+npx @act0r/codex-transcript-md <session-id> --stdout
 ```
 
 If `-o/--out` and `--stdout` are omitted, the file is written to:
@@ -36,10 +37,12 @@ context.
 
 ```text
 Usage: codex-transcript-md <session-id-or-jsonl-path> [options]
+       codex-transcript-md --current [options]
 
 Options:
   -o, --out <file>           write Markdown to this path
   --stdout                   print Markdown to stdout
+  --current                  export the newest local Codex rollout JSONL
   --codex-home <dir>         Codex home directory (default: ~/.codex)
   --session-root <dir>       session root to search (default: <codex-home>/sessions)
   --exports-dir <dir>        default output directory (default: <codex-home>/exports)
@@ -50,22 +53,26 @@ Options:
 
 ## Codex skill
 
-This package also ships an agent skill at `skills/export-session`. After installing
-the skill into your agent's skill directory, you can ask in chat:
+This package also ships an agent skill at `skills/export-session`. Install the skill with:
+
+```bash
+npx skills add @act0r/codex-transcript-md -g --skill export-session -y --full-depth
+```
+
+After restarting your agent session, you can ask in chat:
 
 ```text
 /export-session
 /export-session -o ~/Desktop/session.md
 ```
 
-The skill calls `npx -y codex-transcript-md` and still reads only Codex rollout
-JSONL files; it does not use cxs or what7. Restart your agent session after
-installing new skills so the skill list refreshes.
+The skill calls `npx -y @act0r/codex-transcript-md` and still reads only Codex rollout
+JSONL files; it does not use cxs or what7.
 
 ## Programmatic API
 
 ```js
-import { exportSessionToMarkdown } from "codex-transcript-md";
+import { exportSessionToMarkdown } from "@act0r/codex-transcript-md";
 
 const result = await exportSessionToMarkdown({
   input: "019e14c8-ba55-76e3-a86a-c4d232dedbe0",

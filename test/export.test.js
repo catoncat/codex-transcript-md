@@ -6,6 +6,7 @@ import path from "node:path";
 import {
   appendMessageBody,
   exportSessionToMarkdown,
+  resolveCurrentRollout,
   formatSessionExport,
   inlineCode,
   loadRolloutFile,
@@ -54,6 +55,25 @@ test("resolves session id by scanning rollout filenames", async () => {
 
   assert.equal(result.rolloutPath, rolloutPath);
   assert.equal(result.outputPath, path.join(temp, "exports", "codex-session-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.md"));
+});
+
+test("resolves current rollout by newest mtime", async () => {
+  const temp = await fs.mkdtemp(path.join(os.tmpdir(), "codex-transcript-md-"));
+  const sessionRoot = path.join(temp, "sessions");
+  const older = path.join(sessionRoot, "2026", "05", "10", "rollout-older.jsonl");
+  const newer = path.join(sessionRoot, "2026", "05", "11", "rollout-newer.jsonl");
+  await fs.mkdir(path.dirname(older), { recursive: true });
+  await fs.mkdir(path.dirname(newer), { recursive: true });
+  await fs.writeFile(older, `${line("session_meta", { id: "older" })}\n`);
+  await fs.writeFile(newer, `${line("session_meta", { id: "newer" })}\n`);
+  const oldTime = new Date("2026-05-10T00:00:00Z");
+  const newTime = new Date("2026-05-11T00:00:00Z");
+  await fs.utimes(older, oldTime, oldTime);
+  await fs.utimes(newer, newTime, newTime);
+
+  assert.equal(await resolveCurrentRollout(sessionRoot), newer);
+  const result = await exportSessionToMarkdown({ current: true, sessionRoot, exportsDir: path.join(temp, "exports") });
+  assert.equal(result.sessionId, "newer");
 });
 
 test("supports Rust-style { item } rollout wrapper", async () => {

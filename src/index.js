@@ -5,14 +5,14 @@ import os from "node:os";
 const DEFAULT_EXPORTS_DIRNAME = "exports";
 
 export async function exportSessionToMarkdown(options) {
-  const input = options?.input;
+  const codexHome = expandHome(options?.codexHome ?? path.join(os.homedir(), ".codex"));
+  const sessionRoot = expandHome(options?.sessionRoot ?? path.join(codexHome, "sessions"));
+  const exportsDir = expandHome(options?.exportsDir ?? path.join(codexHome, DEFAULT_EXPORTS_DIRNAME));
+  const input = options?.current ? await resolveCurrentRollout(sessionRoot) : options?.input;
   if (!input || typeof input !== "string") {
-    throw new Error("input is required");
+    throw new Error("input is required unless --current is used");
   }
 
-  const codexHome = expandHome(options.codexHome ?? path.join(os.homedir(), ".codex"));
-  const sessionRoot = expandHome(options.sessionRoot ?? path.join(codexHome, "sessions"));
-  const exportsDir = expandHome(options.exportsDir ?? path.join(codexHome, DEFAULT_EXPORTS_DIRNAME));
   const rolloutPath = await resolveSessionInput(input, { sessionRoot });
   const loaded = await loadRolloutFile(rolloutPath);
   const exportedAt = options.exportedAt ?? new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -44,6 +44,22 @@ export async function exportSessionToMarkdown(options) {
     messageCount: document.messageCount,
     parseErrors: loaded.parseErrors,
   };
+}
+
+export async function resolveCurrentRollout(sessionRoot = path.join(os.homedir(), ".codex", "sessions")) {
+  const root = expandHome(sessionRoot);
+  await assertReadableDirectory(root);
+  let newest = null;
+  let newestMtime = -Infinity;
+  for await (const filePath of walkRollouts(root)) {
+    const stat = await fs.stat(filePath);
+    if (stat.mtimeMs > newestMtime) {
+      newest = filePath;
+      newestMtime = stat.mtimeMs;
+    }
+  }
+  if (!newest) throw new Error(`No rollout JSONL files found under ${root}`);
+  return newest;
 }
 
 export async function resolveSessionInput(input, options = {}) {

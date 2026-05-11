@@ -6,10 +6,12 @@ import path from "node:path";
 import { exportSessionToMarkdown } from "../src/index.js";
 
 const USAGE = `Usage: codex-transcript-md <session-id-or-jsonl-path> [options]
+       codex-transcript-md --current [options]
 
 Options:
   -o, --out <file>           write Markdown to this path
   --stdout                   print Markdown to stdout
+  --current                  export the newest local Codex rollout JSONL
   --codex-home <dir>         Codex home directory (default: ~/.codex)
   --session-root <dir>       session root to search (default: <codex-home>/sessions)
   --exports-dir <dir>        default output directory (default: <codex-home>/exports)
@@ -26,7 +28,8 @@ async function main(argv) {
     console.log(await packageVersion());
     return;
   }
-  if (!args.input) throw new Error(`Missing session id or JSONL path.\n\n${USAGE}`);
+  if (!args.input && !args.current) throw new Error(`Missing session id or JSONL path. Use --current to export the newest local session.\n\n${USAGE}`);
+  if (args.input && args.current) throw new Error("Use either an explicit input or --current, not both.");
   if (args.stdout && args.outFile) throw new Error("Use either --stdout or --out, not both.");
 
   const result = await exportSessionToMarkdown(args);
@@ -47,6 +50,7 @@ function parseArgs(argv) {
     if (arg === "-h" || arg === "--help") out.help = true;
     else if (arg === "-v" || arg === "--version") out.version = true;
     else if (arg === "--stdout") out.stdout = true;
+    else if (arg === "--current") out.current = true;
     else if (arg === "-o" || arg === "--out") out.outFile = takeValue(argv, ++i, arg);
     else if (arg === "--codex-home") out.codexHome = takeValue(argv, ++i, arg);
     else if (arg === "--session-root") out.sessionRoot = takeValue(argv, ++i, arg);

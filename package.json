@@ -1,5 +1,5 @@
 {
-  "name": "codex-transcript-md",
+  "name": "@act0r/codex-transcript-md",
   "version": "0.1.0",
   "description": "Export OpenAI Codex rollout JSONL sessions to clean Markdown transcripts.",
   "type": "module",
