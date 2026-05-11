@@ -85,7 +85,7 @@ After restarting your agent session, you can ask in chat:
 /export-session -o ~/Desktop/session.md
 ```
 
-The skill uses npm's temporary package execution (`npm exec --prefix /tmp -y --package=@act0r/codex-transcript-md -- codex-transcript-md ...`) so users do not need a global install. It still reads only Codex rollout JSONL files; it does not use cxs or what7. When the user asks to publish/share, it adds `--publish-0g` and uses 0g.hk.
+The skill calls `npx -y @act0r/codex-transcript-md`, so users do not need a global install. It still reads only Codex rollout JSONL files; it does not use cxs or what7. When the user asks to publish/share, it adds `--publish-0g` and uses 0g.hk.
 
 ## Programmatic API
 
