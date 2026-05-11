@@ -5,7 +5,7 @@ description: Use when the user says /export-session, $export-session, export-ses
 
 # Export Session
 
-Export the current or specified Codex conversation to Markdown by calling the `@act0r/codex-transcript-md` CLI through `npx -y`.
+Export the current or specified Codex conversation to Markdown by running `@act0r/codex-transcript-md` through npm's temporary package execution.
 
 ## Hard rules
 
@@ -21,31 +21,31 @@ Export the current or specified Codex conversation to Markdown by calling the `@
 If the user provides a session id or JSONL path:
 
 ```bash
-npx -y @act0r/codex-transcript-md <session-id-or-jsonl-path> -o <out.md>
+npm exec --prefix /tmp -y --package=@act0r/codex-transcript-md -- codex-transcript-md <session-id-or-jsonl-path> -o <out.md>
 ```
 
 If the user just says `/export-session`, export the current session by letting the CLI pick the newest local Codex rollout JSONL:
 
 ```bash
-npx -y @act0r/codex-transcript-md --current
+npm exec --prefix /tmp -y --package=@act0r/codex-transcript-md -- codex-transcript-md --current
 ```
 
 If the user asks to publish/share to 0g.hk:
 
 ```bash
-npx -y @act0r/codex-transcript-md --current --publish-0g
+npm exec --prefix /tmp -y --package=@act0r/codex-transcript-md -- codex-transcript-md --current --publish-0g
 ```
 
 For a specified session/path plus 0g.hk:
 
 ```bash
-npx -y @act0r/codex-transcript-md <session-id-or-jsonl-path> --publish-0g
+npm exec --prefix /tmp -y --package=@act0r/codex-transcript-md -- codex-transcript-md <session-id-or-jsonl-path> --publish-0g
 ```
 
 For stdout, only when explicitly requested and never with 0g.hk:
 
 ```bash
-npx -y @act0r/codex-transcript-md <session-id-or-jsonl-path> --stdout
+npm exec --prefix /tmp -y --package=@act0r/codex-transcript-md -- codex-transcript-md <session-id-or-jsonl-path> --stdout
 ```
 
 ## Response format
