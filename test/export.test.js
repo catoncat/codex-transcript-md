@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   appendMessageBody,
+  default0gHistoryPath,
   exportSessionToMarkdown,
   resolveCurrentRollout,
   formatSessionExport,
@@ -130,6 +131,28 @@ test("rejects 0g.hk content over the service text limit", async () => {
   await assert.rejects(
     publishTo0g("x".repeat(24_577), { fetchImpl: async () => { throw new Error("should not fetch"); }, historyPath: false }),
     /text limit/,
+  );
+});
+
+test("uses Windows user data dir for default 0g.hk history", () => {
+  assert.equal(
+    default0gHistoryPath({ LOCALAPPDATA: "C:\\Users\\Ada\\AppData\\Local" }, "win32", "C:\\Users\\Ada"),
+    path.join("C:\\Users\\Ada\\AppData\\Local", "0g-hk", "links.jsonl"),
+  );
+  assert.equal(
+    default0gHistoryPath({ APPDATA: "C:\\Users\\Ada\\AppData\\Roaming" }, "win32", "C:\\Users\\Ada"),
+    path.join("C:\\Users\\Ada\\AppData\\Roaming", "0g-hk", "links.jsonl"),
+  );
+  assert.equal(
+    default0gHistoryPath({}, "win32", "C:\\Users\\Ada"),
+    path.join("C:\\Users\\Ada", "AppData", "Local", "0g-hk", "links.jsonl"),
+  );
+});
+
+test("XDG data dir overrides platform-specific 0g.hk history dir", () => {
+  assert.equal(
+    default0gHistoryPath({ XDG_DATA_HOME: "/tmp/xdg", LOCALAPPDATA: "C:\\Local" }, "win32", "C:\\Users\\Ada"),
+    path.join("/tmp/xdg", "0g-hk", "links.jsonl"),
   );
 });
 

@@ -3,8 +3,7 @@
 Export OpenAI Codex rollout JSONL sessions to clean Markdown transcripts.
 
 This package is intentionally small and standalone: it reads Codex's original
-`~/.codex/sessions/**/rollout-*.jsonl` files directly. It does not depend on any
-external session index, database, or local web app.
+rollout JSONL files directly (default: `~/.codex/sessions` on POSIX/macOS, `%USERPROFILE%\.codex\sessions` on Windows). It does not depend on any external session index, database, or local web app.
 
 ## Usage
 
@@ -20,6 +19,7 @@ If `-o/--out` and `--stdout` are omitted, the file is written to:
 
 ```text
 ~/.codex/exports/codex-session-<session-id>.md
+# Windows: %USERPROFILE%\.codex\exports\codex-session-<session-id>.md
 ```
 
 ## What gets exported
@@ -65,9 +65,13 @@ npx @act0r/codex-transcript-md <session-id> --publish-0g --0g-name my-session --
 ```
 
 The CLI posts the Markdown body to `https://0g.hk/`, prints the public and raw
-URLs, and stores the edit token in `${XDG_DATA_HOME:-~/.local/share}/0g-hk/links.jsonl`
-with file mode `600`. It never prints the edit token. 0g.hk accepts text notes up
-to 24,576 bytes; larger exports stay local.
+URLs, and stores the edit token in the OS user data dir:
+
+- macOS/Linux: `${XDG_DATA_HOME:-~/.local/share}/0g-hk/links.jsonl`
+- Windows: `%LOCALAPPDATA%\0g-hk\links.jsonl` (fallback: `%APPDATA%`, then `%USERPROFILE%\AppData\Local`)
+
+On POSIX systems the ledger file is chmod `600`. The CLI never prints the edit
+token. 0g.hk accepts text notes up to 24,576 bytes; larger exports stay local.
 
 ## Codex skill
 

@@ -398,7 +398,7 @@ function looksLikePath(value) {
 function expandHome(value) {
   if (typeof value !== "string") return value;
   if (value === "~") return os.homedir();
-  if (value.startsWith("~/")) return path.join(os.homedir(), value.slice(2));
+  if (value.startsWith("~/") || value.startsWith("~\\")) return path.join(os.homedir(), value.slice(2));
   return value;
 }
 
@@ -412,8 +412,12 @@ async function assertReadableDirectory(dirPath) {
   if (!stat || !stat.isDirectory()) throw new Error(`Directory not found: ${dirPath}`);
 }
 
-function default0gHistoryPath() {
-  return path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share"), "0g-hk", "links.jsonl");
+export function default0gHistoryPath(env = process.env, platform = process.platform, homeDir = os.homedir()) {
+  const dataHome = env.XDG_DATA_HOME
+    ?? (platform === "win32"
+      ? env.LOCALAPPDATA ?? env.APPDATA ?? path.join(homeDir, "AppData", "Local")
+      : path.join(homeDir, ".local", "share"));
+  return path.join(dataHome, "0g-hk", "links.jsonl");
 }
 
 function firstUrl(value) {

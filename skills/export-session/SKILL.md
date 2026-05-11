@@ -10,9 +10,9 @@ Export the current or specified Codex conversation to Markdown by calling `@act0
 ## Hard rules
 
 - Do **not** use `cxs`, SQLite indexes, what7, or any secondary session database.
-- Read only Codex rollout JSONL files under `$CODEX_HOME/sessions` or `~/.codex/sessions`, unless the user provides another JSONL path.
+- Read only Codex rollout JSONL files under `$CODEX_HOME/sessions`, `~/.codex/sessions`, or the Windows equivalent `%USERPROFILE%\.codex\sessions`, unless the user provides another JSONL path.
 - Do not paste the exported transcript into chat unless the user explicitly asks; report the output path and message count.
-- If the user provides an output path, honor it. Otherwise let the CLI write to `~/.codex/exports/`.
+- If the user provides an output path, honor it. Otherwise let the CLI write to the default Codex exports dir (`~/.codex/exports/` or `%USERPROFILE%\.codex\exports\` on Windows).
 - Do not publish to 0g.hk unless the user explicitly says publish/share/0g.hk/public link.
 - 0g.hk is public and temporary. If publishing, use `--publish-0g`; optional `--0g-name <name>` and `--0g-ttl 1h|1d|7d` are allowed.
 
