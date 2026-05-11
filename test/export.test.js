@@ -66,10 +66,10 @@ test("supports Rust-style { item } rollout wrapper", async () => {
   assert.match(document.markdown, /### User\n\nhello/);
 });
 
-test("wraps bodies containing fenced code in a larger markdown fence", () => {
-  assert.equal(appendMessageBody("Example:\n```js\nconsole.log(1)\n```"), "````markdown\nExample:\n```js\nconsole.log(1)\n```\n````\n");
+test("preserves fenced code as renderable markdown", () => {
+  assert.equal(appendMessageBody("Example:\n```js\nconsole.log(1)\n```"), "Example:\n```js\nconsole.log(1)\n```\n");
   assert.equal(longestBacktickRun("````\nbody\n````"), 4);
-  assert.equal(appendMessageBody("````\nbody\n````"), "`````markdown\n````\nbody\n````\n`````\n");
+  assert.equal(appendMessageBody("````\nbody\n````"), "````\nbody\n````\n");
 });
 
 test("metadata inline code expands around backticks", () => {

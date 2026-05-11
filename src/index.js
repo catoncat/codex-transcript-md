@@ -200,10 +200,10 @@ export function inlineCode(value) {
 export function appendMessageBody(body) {
   if (!body) return "_(empty message)_\n";
   const trimmed = body.replace(/\n+$/u, "");
-  if (trimmed.includes("```")) {
-    const fence = "`".repeat(longestBacktickRun(trimmed) + 1);
-    return `${fence}markdown\n${trimmed}\n${fence}\n`;
-  }
+  // Preserve the assistant/user message as Markdown. Wrapping messages that
+  // contain fenced code in a larger `markdown` fence makes Markdown viewers
+  // render the whole answer as a code block, which defeats the purpose of an
+  // export meant for reading.
   return `${trimmed}\n`;
 }
 
