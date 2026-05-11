@@ -1,0 +1,37 @@
+{
+  "name": "codex-transcript-md",
+  "version": "0.1.0",
+  "description": "Export OpenAI Codex rollout JSONL sessions to clean Markdown transcripts.",
+  "type": "module",
+  "bin": {
+    "codex-transcript-md": "bin/codex-transcript-md.js"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check bin/codex-transcript-md.js && node --check src/index.js"
+  },
+  "keywords": [
+    "codex",
+    "transcript",
+    "markdown",
+    "jsonl",
+    "export"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
