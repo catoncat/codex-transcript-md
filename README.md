@@ -47,6 +47,21 @@ Options:
   -v, --version              show version
 ```
 
+
+## Codex skill
+
+This package also ships an agent skill at `skills/export-session`. After installing
+the skill into your agent's skill directory, you can ask in chat:
+
+```text
+/export-session
+/export-session -o ~/Desktop/session.md
+```
+
+The skill calls `npx -y codex-transcript-md` and still reads only Codex rollout
+JSONL files; it does not use cxs or what7. Restart your agent session after
+installing new skills so the skill list refreshes.
+
 ## Programmatic API
 
 ```js
