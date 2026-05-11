@@ -14,7 +14,8 @@
     "src",
     "README.md",
     "LICENSE",
-    "skills"
+    "skills",
+    "assets"
   ],
   "scripts": {
     "test": "node --test",

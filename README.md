@@ -1,40 +1,78 @@
 # codex-transcript-md
 
-Export OpenAI Codex rollout JSONL sessions to clean Markdown transcripts.
+Export the current Codex conversation from inside chat.
 
-This package is intentionally small and standalone: it reads Codex's original
-rollout JSONL files directly (default: `~/.codex/sessions` on POSIX/macOS, `%USERPROFILE%\.codex\sessions` on Windows). It does not depend on any external session index, database, or local web app.
+This repo ships an agent skill named `export-session`. Install it once, then ask your agent to export the current session as a clean Markdown transcript. It reads Codex rollout JSONL files directly; it does **not** use cxs, what7, or any secondary index.
 
-## Usage
+## Install the skill
 
 ```bash
-npx @act0r/codex-transcript-md --current
-npx @act0r/codex-transcript-md --current --publish-0g
-npx @act0r/codex-transcript-md <session-id> -o session.md
-npx @act0r/codex-transcript-md ~/.codex/sessions/2026/05/11/rollout-....jsonl -o session.md
-npx @act0r/codex-transcript-md <session-id> --stdout
+npx skills add catoncat/codex-transcript-md
 ```
 
-If `-o/--out` and `--stdout` are omitted, the file is written to:
+Restart your agent session after installing so the skill list refreshes.
+
+## Use it in chat
+
+```text
+/export-session
+```
+
+The agent exports the current Codex session to the default local exports folder and reports the path plus message count.
+
+![Export Session in chat](assets/chat-export-session.svg)
+
+Need a temporary public link? Ask naturally, or use:
+
+```text
+/export-session publish
+```
+
+The agent exports locally, publishes the Markdown to 0g.hk, opens/returns the public link, and keeps the edit token only in the local 0g.hk ledger.
+
+![Publish exported session to 0g.hk](assets/chat-publish-0g.svg)
+
+## What gets exported
+
+Only user-visible conversation events:
+
+- `event_msg:user_message`
+- `event_msg:agent_message`
+
+Skipped by default: system/developer instructions, model context, reasoning, tool calls, tool outputs, token counters, and other internal runtime events.
+
+## Where files go
+
+If no output path is provided:
 
 ```text
 ~/.codex/exports/codex-session-<session-id>.md
 # Windows: %USERPROFILE%\.codex\exports\codex-session-<session-id>.md
 ```
 
-## What gets exported
+Codex sessions are read from:
 
-The exporter follows Codex's user-visible rollout events:
+```text
+~/.codex/sessions
+# Windows: %USERPROFILE%\.codex\sessions
+```
 
-- `event_msg:user_message`
-- `event_msg:agent_message`
+0g.hk edit tokens are stored locally and never printed in chat:
 
-It skips model context, developer/system instructions, reasoning, tool calls,
-tool outputs, token counters, and other internal events. That makes the Markdown
-safe to hand back to an LLM for review without dragging along hidden runtime
-context.
+- macOS/Linux: `${XDG_DATA_HOME:-~/.local/share}/0g-hk/links.jsonl`
+- Windows: `%LOCALAPPDATA%\0g-hk\links.jsonl` (fallback: `%APPDATA%`, then `%USERPROFILE%\AppData\Local`)
 
-## Options
+## CLI escape hatch
+
+The skill calls the CLI through `npx -y @act0r/codex-transcript-md`. You usually do not need to run it directly, but it is available:
+
+```bash
+npx @act0r/codex-transcript-md --current
+npx @act0r/codex-transcript-md --current --publish-0g
+npx @act0r/codex-transcript-md <session-id-or-jsonl-path> -o session.md
+```
+
+Options:
 
 ```text
 Usage: codex-transcript-md <session-id-or-jsonl-path> [options]
@@ -54,50 +92,13 @@ Options:
   -v, --version              show version
 ```
 
-
-## 0g.hk temporary public link
-
-Publishing is explicit because 0g.hk pages are public temporary notes. Use:
-
-```bash
-npx @act0r/codex-transcript-md --current --publish-0g
-npx @act0r/codex-transcript-md <session-id> --publish-0g --0g-name my-session --0g-ttl 1d
-```
-
-The CLI posts the Markdown body to `https://0g.hk/`, prints the public and raw
-URLs, and stores the edit token in the OS user data dir:
-
-- macOS/Linux: `${XDG_DATA_HOME:-~/.local/share}/0g-hk/links.jsonl`
-- Windows: `%LOCALAPPDATA%\0g-hk\links.jsonl` (fallback: `%APPDATA%`, then `%USERPROFILE%\AppData\Local`)
-
-On POSIX systems the ledger file is chmod `600`. The CLI never prints the edit
-token. 0g.hk accepts text notes up to 24,576 bytes; larger exports stay local.
-
-## Codex skill
-
-This package also ships an agent skill at `skills/export-session`. Install the skill with:
-
-```bash
-npx skills add @act0r/codex-transcript-md -g --skill export-session -y --full-depth
-```
-
-After restarting your agent session, you can ask in chat:
-
-```text
-/export-session
-/export-session publish
-/export-session -o ~/Desktop/session.md
-```
-
-The skill calls `npx -y @act0r/codex-transcript-md`, so users do not need a global install. It still reads only Codex rollout JSONL files; it does not use cxs or what7. When the user asks to publish/share, it adds `--publish-0g` and uses 0g.hk.
-
 ## Programmatic API
 
 ```js
 import { exportSessionToMarkdown } from "@act0r/codex-transcript-md";
 
 const result = await exportSessionToMarkdown({
-  input: "019e14c8-ba55-76e3-a86a-c4d232dedbe0",
+  current: true,
   outFile: "session.md",
 });
 
